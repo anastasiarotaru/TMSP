@@ -1,10 +1,12 @@
 namespace DeliverySOLID;
 
+// Abstraction: how a message is sent to the customer.
 public interface INotifier
 {
     void Send(string recipient, string message);
 }
 
+// Prints the messages to the console.
 public class ConsoleNotifier : INotifier
 {
     public void Send(string recipient, string message)
@@ -13,6 +15,7 @@ public class ConsoleNotifier : INotifier
     }
 }
 
+// Keeps the messages in memory. Useful for checks.
 public class InMemoryNotifier : INotifier
 {
     public List<string> Sent { get; } = new();
@@ -23,10 +26,9 @@ public class InMemoryNotifier : INotifier
     }
 }
 
+// High-level class. It depends only on the INotifier and IPricingStrategy abstractions.
 public class DeliveryService
 {
-    private const double MaxWeightKg = 30.0;
-
     private static readonly ParcelStatus[] Flow =
     {
         ParcelStatus.Registered,
@@ -38,7 +40,6 @@ public class DeliveryService
     private readonly INotifier notifier;
     private readonly Dictionary<string, IPricingStrategy> services;
     private readonly Dictionary<string, Parcel> parcels = new();
-    private int nextId = 1;
 
     public DeliveryService(INotifier notifier, Dictionary<string, IPricingStrategy> services)
     {
@@ -55,22 +56,22 @@ public class DeliveryService
                 $"Unknown service '{service}'. Available: {string.Join(", ", services.Keys)}");
         }
 
-        if (weightKg <= 0 || weightKg > MaxWeightKg)
-        {
-            throw new ArgumentException($"The weight must be between 0 and {MaxWeightKg} kg");
-        }
+        // The Builder creates the parcel; it validates the data and gets the code from the Singleton.
+        Parcel parcel = new ParcelBuilder()
+            .To(recipientName, recipientEmail)
+            .Destination(destination)
+            .Weight(weightKg)
+            .Service(service)
+            .Build(services[service]);
 
-        double price = services[service].CalculatePrice(weightKg);
-        var parcel = new Parcel($"RO{nextId:D6}", recipientName, recipientEmail,
-                                destination, weightKg, service, price);
-        nextId++;
         parcels[parcel.TrackingId] = parcel;
 
         notifier.Send(recipientEmail,
-            $"Parcel {parcel.TrackingId} has been registered. Price: {price:F2} lei.");
+            $"Parcel {parcel.TrackingId} has been registered. Price: {parcel.Price:F2} lei.");
         return parcel;
     }
 
+    // Moves the parcel to the next stage. Stages cannot be skipped.
     public void Advance(string trackingId, ParcelStatus newStatus)
     {
         Parcel parcel = Get(trackingId);
