@@ -1,11 +1,13 @@
 using DeliverySOLID;
+using DeliveryStructural;
 
 IPricingStrategy standard = new StandardPricing();
 var services = new Dictionary<string, IPricingStrategy>(StringComparer.OrdinalIgnoreCase)
 {
     { "standard", standard },
     { "express", new ExpressPricing(standard) },
-    { "overnight", new OvernightPricing(standard) }
+    { "overnight", new OvernightPricing(standard) },
+    { "international", new PartnerPricingAdapter(new PartnerCourierApi(), "EU") }
 };
 
 var delivery = new DeliveryService(new ConsoleNotifier(), services);
@@ -28,7 +30,7 @@ if (!double.TryParse(Console.ReadLine(), out double weight))
     Console.WriteLine("Eroare: greutatea trebuie sa fie un numar.");
     return;
 }
-Console.Write("Serviciu (standard / express / overnight): ");
+Console.Write("Serviciu (standard / express / overnight / international): ");
 string service = Console.ReadLine() ?? "";
 
 Parcel parcel;
