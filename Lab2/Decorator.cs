@@ -50,3 +50,34 @@ public class FragileDecorator : PricingDecorator
     public override double CalculatePrice(double weightKg) =>
         Math.Round(base.CalculatePrice(weightKg) + Fee, 2);
 }
+
+// Decorator de baza pentru notificari.
+public abstract class NotifierDecorator : INotifier
+{
+    protected readonly INotifier inner;
+
+    protected NotifierDecorator(INotifier inner)
+    {
+        this.inner = inner;
+    }
+
+    public virtual void Send(string recipient, string message) => inner.Send(recipient, message);
+}
+
+// Pastreaza un jurnal cu ora fiecarei notificari, apoi o trimite mai departe.
+public class LoggingNotifier : NotifierDecorator
+{
+    private readonly List<string> history = new();
+
+    public IReadOnlyList<string> History => history;
+
+    public LoggingNotifier(INotifier inner) : base(inner)
+    {
+    }
+
+    public override void Send(string recipient, string message)
+    {
+        history.Add($"[{DateTime.Now:HH:mm:ss}] {recipient}: {message}");
+        base.Send(recipient, message);
+    }
+}

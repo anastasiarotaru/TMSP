@@ -10,7 +10,8 @@ var services = new Dictionary<string, IPricingStrategy>(StringComparer.OrdinalIg
     { "international", new PartnerPricingAdapter(new PartnerCourierApi(), "EU") }
 };
 
-var delivery = new DeliveryService(new ConsoleNotifier(), services);
+var notifier = new LoggingNotifier(new ConsoleNotifier());
+var delivery = new DeliveryService(notifier, services);
 var labels = new LabelPrinter();
 
 Console.WriteLine("=== SERVICIUL DE LIVRARE A COLETELOR ===");
@@ -52,3 +53,9 @@ delivery.Advance(parcel.TrackingId, ParcelStatus.InTransit);
 delivery.Advance(parcel.TrackingId, ParcelStatus.Delivered);
 
 Console.WriteLine($"\nStatus final: {parcel.Status}");
+
+Console.WriteLine("\n=== JURNAL NOTIFICARI ===");
+foreach (string entry in notifier.History)
+{
+    Console.WriteLine(entry);
+}
