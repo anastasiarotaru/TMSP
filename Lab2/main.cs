@@ -1,18 +1,7 @@
 using DeliverySOLID;
 using DeliveryStructural;
 
-IPricingStrategy standard = new StandardPricing();
-var services = new Dictionary<string, IPricingStrategy>(StringComparer.OrdinalIgnoreCase)
-{
-    { "standard", standard },
-    { "express", new ExpressPricing(standard) },
-    { "overnight", new OvernightPricing(standard) },
-    { "international", new PartnerPricingAdapter(new PartnerCourierApi(), "EU") }
-};
-
-var notifier = new LoggingNotifier(new ConsoleNotifier());
-var delivery = new DeliveryService(notifier, services);
-var labels = new LabelPrinter();
+var shipping = new ShippingFacade();
 
 Console.WriteLine("=== SERVICIUL DE LIVRARE A COLETELOR ===");
 Console.WriteLine("--------------------------------------------------------------");
@@ -31,13 +20,22 @@ if (!double.TryParse(Console.ReadLine(), out double weight))
     Console.WriteLine("Eroare: greutatea trebuie sa fie un numar.");
     return;
 }
-Console.Write("Serviciu (standard / express / overnight / international): ");
+Console.Write($"Serviciu ({string.Join(" / ", shipping.ServiceNames)}): ");
 string service = Console.ReadLine() ?? "";
+Console.Write("Colet fragil? (da / nu): ");
+bool fragile = (Console.ReadLine() ?? "").Trim().Equals("da", StringComparison.OrdinalIgnoreCase);
+Console.Write("Valoare declarata pentru asigurare (lei, 0 = fara asigurare): ");
+if (!double.TryParse(Console.ReadLine(), out double declaredValue) || declaredValue < 0)
+{
+    Console.WriteLine("Eroare: valoarea declarata trebuie sa fie un numar pozitiv sau 0.");
+    return;
+}
 
 Parcel parcel;
 try
 {
-    parcel = delivery.Register(name, email, new Address(street, city), weight, service);
+    parcel = shipping.Ship(new ShipmentRequest(
+        name, email, street, city, weight, service, fragile, declaredValue));
 }
 catch (ArgumentException ex)
 {
@@ -45,17 +43,13 @@ catch (ArgumentException ex)
     return;
 }
 
-labels.PrintLabel(parcel);
-
 Console.WriteLine("\n=== PARCURGEREA ETAPELOR ===");
-delivery.Advance(parcel.TrackingId, ParcelStatus.PickedUp);
-delivery.Advance(parcel.TrackingId, ParcelStatus.InTransit);
-delivery.Advance(parcel.TrackingId, ParcelStatus.Delivered);
+shipping.DeliverToEnd(parcel.TrackingId);
 
 Console.WriteLine($"\nStatus final: {parcel.Status}");
 
 Console.WriteLine("\n=== JURNAL NOTIFICARI ===");
-foreach (string entry in notifier.History)
+foreach (string entry in shipping.NotificationHistory)
 {
     Console.WriteLine(entry);
 }
