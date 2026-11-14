@@ -50,3 +50,34 @@ public class FragileDecorator : PricingDecorator
     public override double CalculatePrice(double weightKg) =>
         Math.Round(base.CalculatePrice(weightKg) + Fee, 2);
 }
+
+// Base decorator for notifications.
+public abstract class NotifierDecorator : INotifier
+{
+    protected readonly INotifier inner;
+
+    protected NotifierDecorator(INotifier inner)
+    {
+        this.inner = inner;
+    }
+
+    public virtual void Send(string recipient, string message) => inner.Send(recipient, message);
+}
+
+// Keeps a log with the time of each notification, then passes it on.
+public class LoggingNotifier : NotifierDecorator
+{
+    private readonly List<string> history = new();
+
+    public IReadOnlyList<string> History => history;
+
+    public LoggingNotifier(INotifier inner) : base(inner)
+    {
+    }
+
+    public override void Send(string recipient, string message)
+    {
+        history.Add($"[{DateTime.Now:HH:mm:ss}] {recipient}: {message}");
+        base.Send(recipient, message);
+    }
+}
