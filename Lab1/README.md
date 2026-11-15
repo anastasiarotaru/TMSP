@@ -1,41 +1,41 @@
-# Laboratorul 1 - Principii SOLID (sistem de livrare a coletelor)
+# Laboratory Work 1 - SOLID Principles (package delivery system)
 
-## Scopul laboratorului
+## Purpose
 
-Scopul laboratorului este analiza principiilor SOLID si implementarea a trei dintre ele intr-o aplicatie simpla pentru livrarea coletelor. Principiile alese sunt SRP (Single Responsibility Principle), OCP (Open/Closed Principle) si DIP (Dependency Inversion Principle).
+The purpose of this laboratory work is to analyse the SOLID principles and implement three of them in a simple package delivery application. The chosen principles are SRP (Single Responsibility Principle), OCP (Open/Closed Principle) and DIP (Dependency Inversion Principle).
 
-Aplicatia permite inregistrarea unui colet cu destinatar, adresa, greutate si serviciu de livrare (standard, express sau overnight). Programul calculeaza pretul, afiseaza eticheta si parcurge coletul prin etapele de livrare, trimitand o notificare clientului la fiecare schimbare.
+The application registers a parcel with a recipient, an address, a weight and a delivery service (standard, express or overnight). The program calculates the price, prints the label and moves the parcel through the delivery stages, sending a notification to the customer at every change.
 
-## Ce reprezinta SOLID
+## What SOLID is
 
-SOLID este un set de cinci principii folosite in programarea orientata pe obiecte pentru a obtine cod mai organizat, mai usor de inteles si mai simplu de modificat. Principiile ajuta la reducerea dependintelor dintre clase si la separarea responsabilitatilor.
+SOLID is a set of five principles used in object-oriented programming to get code that is better organised, easier to understand and simpler to change. The principles help reduce the dependencies between classes and separate responsibilities.
 
-In cadrul acestui laborator nu au fost implementate toate cele cinci principii. Au fost selectate SRP, OCP si DIP deoarece se potrivesc natural cu domeniul livrarii: exista date despre colet, mai multe servicii de livrare cu preturi diferite si mai multe modalitati de a notifica clientul.
+Not all five principles were implemented in this laboratory work. SRP, OCP and DIP were selected because they fit the delivery domain naturally: there is parcel data, several delivery services with different prices and several ways to notify the customer.
 
-## Cum se ruleaza
+## How to run
 
-Este necesar sa fie instalat .NET SDK. Proiectul foloseste .NET 10.
+The .NET SDK must be installed. The project uses .NET 10.
 
-Din PowerShell se ruleaza:
+From PowerShell run:
 
 ```powershell
-cd D:\TMPS\lab1
+cd Lab1
 dotnet run
 ```
 
-Pentru verificarea compilarii fara pornirea programului:
+To check that the project compiles without starting the program:
 
 ```powershell
 dotnet build
 ```
 
-### Utilizarea programului
+### Using the program
 
-Programul cere pe rand numele destinatarului, e-mailul, strada, orasul, greutatea (in kg) si serviciul. Serviciile acceptate sunt `standard`, `express` si `overnight`. Greutatea trebuie sa fie intre 0 si 30 kg.
+The program asks, one by one, for the recipient's name, e-mail, street, city, weight (in kg) and service. The accepted services are `standard`, `express` and `overnight`. The weight must be between 0 and 30 kg. The program's messages are in Romanian.
 
-La final, programul afiseaza eticheta coletului, apoi il trece prin etapele `ridicat`, `in tranzit` si `livrat`, cu cate o notificare pentru fiecare etapa.
+At the end, the program prints the parcel label and then moves it through the stages `picked up`, `in transit` and `delivered`, with a notification for each stage.
 
-Un exemplu de interactiune:
+An example interaction:
 
 ```text
 Numele destinatarului: Ion Popescu
@@ -46,53 +46,53 @@ Greutate (kg): 3,2
 Serviciu (standard / express / overnight): express
 ```
 
-Pentru acest exemplu, pretul standard este 5 + 1,5 x 3,2 = 9,80 lei, iar serviciul express dubleaza pretul, deci suma finala este 19,60 lei.
+For this example, the standard price is 5 + 1.5 x 3.2 = 9.80 lei, and the express service doubles the price, so the final amount is 19.60 lei.
 
-## Implementarea principiilor SOLID
+## Implementation of the SOLID principles
 
 ### 1. SRP - Single Responsibility Principle
 
-SRP inseamna ca o clasa trebuie sa aiba o singura responsabilitate principala si un singur motiv important pentru a fi modificata.
+SRP means that a class should have a single main responsibility and a single important reason to change.
 
-In proiect, SRP este implementat in `SRP.cs`. Clasa `Parcel` retine datele coletului, clasa `Address` retine adresa, iar `LabelPrinter` are responsabilitatea de a afisa eticheta. Clasa `Parcel` nu calculeaza pretul si nu afiseaza nimic.
+In the project, SRP is implemented in `SRP.cs`. The `Parcel` class holds the parcel data, the `Address` class holds the address, and `LabelPrinter` is responsible for printing the label. The `Parcel` class does not calculate the price and does not print anything.
 
-Responsabilitatile sunt separate: daca se schimba layout-ul etichetei, se modifica doar `LabelPrinter`; daca se schimba datele unui colet, se modifica doar `Parcel`.
+The responsibilities are separated: if the label layout changes, only `LabelPrinter` is modified; if the parcel data changes, only `Parcel` is modified.
 
 ### 2. OCP - Open/Closed Principle
 
-OCP inseamna ca un modul trebuie sa fie deschis pentru extindere, dar inchis pentru modificari. Astfel, putem adauga comportamente noi fara sa schimbam codul existent.
+OCP means that a module should be open for extension but closed for modification. This way, new behaviour can be added without changing the existing code.
 
-In `OCP.cs` exista interfata `IPricingStrategy`, care defineste metoda `CalculatePrice(double weightKg)`. Aceasta este implementata de `StandardPricing` (5 lei + 1,50 lei/kg), `ExpressPricing` (dublul pretului standard) si `OvernightPricing` (pretul standard plus 15 lei).
+`OCP.cs` contains the `IPricingStrategy` interface, which defines the method `CalculatePrice(double weightKg)`. It is implemented by `StandardPricing` (5 lei + 1.50 lei/kg), `ExpressPricing` (double the standard price) and `OvernightPricing` (the standard price plus 15 lei).
 
-Pentru a adauga un serviciu nou, de exemplu `EconomyPricing`, se scrie o clasa noua care implementeaza `IPricingStrategy` si se adauga o linie in dictionarul din `main.cs`. Clasa `DeliveryService` nu se modifica.
+To add a new service, for example `EconomyPricing`, you write a new class that implements `IPricingStrategy` and add one line to the dictionary in `main.cs`. The `DeliveryService` class does not change.
 
 ### 3. DIP - Dependency Inversion Principle
 
-DIP inseamna ca modulele de nivel inalt nu trebuie sa depinda de detalii concrete, ci de abstractii.
+DIP means that high-level modules should not depend on concrete details, but on abstractions.
 
-In `DIP.cs`, clasa `DeliveryService` (logica de business) primeste prin constructor un `INotifier` si un dictionar de `IPricingStrategy`. Nu stie daca mesajele ajung in consola sau pe e-mail. In `main.cs` se decide ce implementari se folosesc (`ConsoleNotifier`, `StandardPricing` etc.), iar `InMemoryNotifier` poate fi folosit in locul consolei pentru verificari.
+In `DIP.cs`, the `DeliveryService` class (the business logic) receives an `INotifier` and a dictionary of `IPricingStrategy` through its constructor. It does not know whether the messages go to the console or by e-mail. `main.cs` decides which implementations are used (`ConsoleNotifier`, `StandardPricing` etc.), and `InMemoryNotifier` can be used instead of the console for checks.
 
-## Structura proiectului
+## Project structure
 
-Fisierul `main.cs` este punctul de intrare si contine fluxul interactiv al aplicatiei. `SRP.cs` contine clasele pentru colet, adresa si eticheta, `OCP.cs` contine strategiile de pret, iar `DIP.cs` contine interfata de notificare si `DeliveryService`. Configuratia proiectului .NET se afla in `TMPS.csproj`.
+The `main.cs` file is the entry point and contains the interactive flow of the application. `SRP.cs` contains the classes for the parcel, the address and the label, `OCP.cs` contains the pricing strategies, and `DIP.cs` contains the notification interface and `DeliveryService`. The .NET project configuration is in `TMPS.csproj`.
 
-Fluxul aplicatiei porneste din `main.cs`: datele sunt citite de la utilizator, `DeliveryService.Register` calculeaza pretul si salveaza coletul, `LabelPrinter` afiseaza eticheta, iar `DeliveryService.Advance` trece coletul prin etape.
+The application flow starts in `main.cs`: the data is read from the user, `DeliveryService.Register` calculates the price and saves the parcel, `LabelPrinter` prints the label, and `DeliveryService.Advance` moves the parcel through the stages.
 
-## Verificare si testare
+## Verification and testing
 
-Testarea se face prin rularea interactiva a aplicatiei. Trebuie verificate:
-- pretul pentru fiecare serviciu (standard, express, overnight);
-- respingerea unui serviciu inexistent si a unei greutati in afara intervalului 0-30 kg;
-- ordinea etapelor: un colet nu poate sari o etapa si nu poate fi avansat dupa `livrat`.
+Testing is done by running the application interactively. The following must be checked:
+- the price for each service (standard, express, overnight);
+- the rejection of an unknown service and of a weight outside the 0-30 kg range;
+- the order of the stages: a parcel cannot skip a stage and cannot be advanced after `delivered`.
 
-Comanda `dotnet build` verifica daca fisierele C# se compileaza, iar `dotnet run` porneste aplicatia. Proiectul nu contine inca teste automate.
+The `dotnet build` command checks that the C# files compile, and `dotnet run` starts the application. The project does not contain automated tests yet.
 
-## Posibilitati de extindere
+## Possible extensions
 
-Pentru un serviciu nou de livrare se poate crea o clasa noua care implementeaza `IPricingStrategy`. Pentru un canal nou de notificare (e-mail, SMS) se poate crea o clasa care implementeaza `INotifier`.
+For a new delivery service, a new class that implements `IPricingStrategy` can be created. For a new notification channel (e-mail, SMS), a class that implements `INotifier` can be created.
 
-Ca imbunatatiri viitoare, aplicatia ar putea salva coletele intr-un fisier sau intr-o baza de date, ar putea folosi `decimal` in loc de `double` pentru sume de bani si ar putea primi mai multe colete intr-o singura sesiune.
+As future improvements, the application could save the parcels to a file or a database, could use `decimal` instead of `double` for money amounts and could accept several parcels in a single session.
 
-## Concluzie
+## Conclusion
 
-Laboratorul arata cum principiile SOLID fac codul mai clar, mai usor de intretinut si mai simplu de extins. Separarea responsabilitatilor prin SRP, folosirea strategiilor de pret prin OCP si dependenta de abstractii prin DIP reduc legaturile dintre componente. Aplicatia poate fi extinsa cu servicii de livrare sau canale de notificare noi fara modificari majore in clasele existente.
+This laboratory work shows how the SOLID principles make code clearer, easier to maintain and simpler to extend. Separating responsibilities through SRP, using pricing strategies through OCP and depending on abstractions through DIP reduce the coupling between components. The application can be extended with new delivery services or notification channels without major changes to the existing classes.

@@ -1,39 +1,39 @@
-# Proiect: livrarea pachetelor (3 principii SOLID)
+# Project: package delivery (3 SOLID principles)
 
-Un proiect mic în Python, fără librării externe, care arată trei principii SOLID
-într-un scenariu realist de livrare a coletelor.
+A small Python project, with no external libraries, that shows three SOLID principles
+in a realistic package delivery scenario.
 
-| Principiu | Fișier | Ce arată |
-|-----------|--------|----------|
-| **S** – Single Responsibility | `labels.py`, `models.py` | Datele pachetului, eticheta și logica de business sunt în clase separate. Fiecare are un singur motiv de modificare. |
-| **O** – Open/Closed | `pricing.py` | Strategiile de preț sunt extinse prin clase noi. `DeliveryService` nu se modifică niciodată când apare un serviciu nou. |
-| **D** – Dependency Inversion | `notifications.py`, `storage.py`, `service.py` | `DeliveryService` depinde de abstracții (`Notifier`, `PackageRepository`, `PricingStrategy`), nu de implementări concrete. |
+| Principle | File | What it shows |
+|-----------|------|---------------|
+| **S** – Single Responsibility | `labels.py`, `models.py` | The package data, the label and the business logic are in separate classes. Each one has a single reason to change. |
+| **O** – Open/Closed | `pricing.py` | Pricing strategies are extended with new classes. `DeliveryService` never changes when a new service is added. |
+| **D** – Dependency Inversion | `notifications.py`, `storage.py`, `service.py` | `DeliveryService` depends on abstractions (`Notifier`, `PackageRepository`, `PricingStrategy`), not on concrete implementations. |
 
-## Rulare
+## Running
 
 ```bash
-python3 main.py          # demo: înregistrare, etichetă, etape, istoric
-python3 -m unittest -v   # teste
+python3 main.py          # demo: registration, label, stages, history
+python3 -m unittest -v   # tests
 ```
 
-Necesită Python 3.10 sau mai nou.
+Requires Python 3.10 or newer.
 
-## Structura
+## Structure
 
 ```
-models.py         Package, Address, Status (doar date)
+models.py         Package, Address, Status (data only)
 pricing.py        PricingStrategy + Standard / Express / Overnight   (OCP)
 notifications.py  Notifier + ConsoleNotifier, InMemoryNotifier        (DIP)
 storage.py        PackageRepository + InMemoryPackageRepository       (DIP)
-labels.py         LabelPrinter - formatarea etichetei                  (SRP)
-service.py        DeliveryService - coordonarea                        (SRP, OCP, DIP)
+labels.py         LabelPrinter - label formatting                     (SRP)
+service.py        DeliveryService - coordination                      (SRP, OCP, DIP)
 main.py           demo
-test_delivery.py  teste pentru fiecare principiu și pentru fluxul de livrare
+test_delivery.py  tests for each principle and for the delivery flow
 ```
 
-## Exemple de extindere
+## Extension examples
 
-**Serviciu nou (OCP)**: scrii o clasă nouă și o adaugi în dicționarul de servicii, fără să atingi `service.py`:
+**New service (OCP)**: write a new class and add it to the services dictionary, without touching `service.py`:
 
 ```python
 class EconomyPricing(PricingStrategy):
@@ -46,8 +46,8 @@ service = DeliveryService(repo, notifier, {
 })
 ```
 
-**Alt canal de notificare (DIP)**: scrii o clasă care moștenește `Notifier` (de exemplu `EmailNotifier`) și o pasezi în constructor.
+**Another notification channel (DIP)**: write a class that inherits from `Notifier` (for example `EmailNotifier`) and pass it to the constructor.
 
-**Altă bază de date (DIP)**: scrii o clasă care moștenește `PackageRepository` (de exemplu cu SQLite).
+**Another database (DIP)**: write a class that inherits from `PackageRepository` (for example using SQLite).
 
-**Altă etichetă (SRP)**: modifici doar `labels.py`.
+**Another label layout (SRP)**: modify only `labels.py`.
