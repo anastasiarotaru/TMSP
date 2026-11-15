@@ -1,22 +1,7 @@
 using DeliverySOLID;
+using DeliveryStructural;
 
-// 1. FACTORY METHOD: each factory creates the pricing strategy for one service.
-var factories = new Dictionary<string, PricingFactory>(StringComparer.OrdinalIgnoreCase)
-{
-    { "standard", new StandardPricingFactory() },
-    { "express", new ExpressPricingFactory() },
-    { "overnight", new OvernightPricingFactory() }
-};
-
-// Get the pricing strategy from each factory (OCP: a new service = a new factory + one line here).
-var services = factories.ToDictionary(
-    kv => kv.Key,
-    kv => kv.Value.CreatePricing(),
-    StringComparer.OrdinalIgnoreCase);
-
-// 2. Dependencies are supplied from outside (DIP).
-var delivery = new DeliveryService(new ConsoleNotifier(), services);
-var labels = new LabelPrinter();
+var shipping = new ShippingFacade();
 
 Console.WriteLine("=== PARCEL DELIVERY SERVICE ===");
 Console.WriteLine("--------------------------------------------------------------");
@@ -35,13 +20,22 @@ if (!double.TryParse(Console.ReadLine(), out double weight))
     Console.WriteLine("Error: the weight must be a number.");
     return;
 }
-Console.Write("Service (standard / express / overnight): ");
+Console.Write($"Service ({string.Join(" / ", shipping.ServiceNames)}): ");
 string service = Console.ReadLine() ?? "";
+Console.Write("Fragile parcel? (yes / no): ");
+bool fragile = (Console.ReadLine() ?? "").Trim().Equals("yes", StringComparison.OrdinalIgnoreCase);
+Console.Write("Declared value for insurance (lei, 0 = no insurance): ");
+if (!double.TryParse(Console.ReadLine(), out double declaredValue) || declaredValue < 0)
+{
+    Console.WriteLine("Error: the declared value must be a positive number or 0.");
+    return;
+}
 
 Parcel parcel;
 try
 {
-    parcel = delivery.Register(name, email, new Address(street, city), weight, service);
+    parcel = shipping.Ship(new ShipmentRequest(
+        name, email, street, city, weight, service, fragile, declaredValue));
 }
 catch (ArgumentException ex)
 {
@@ -49,12 +43,13 @@ catch (ArgumentException ex)
     return;
 }
 
-// 3. The label (SRP) and the delivery stages.
-labels.PrintLabel(parcel);
-
 Console.WriteLine("\n=== DELIVERY STAGES ===");
-delivery.Advance(parcel.TrackingId, ParcelStatus.PickedUp);
-delivery.Advance(parcel.TrackingId, ParcelStatus.InTransit);
-delivery.Advance(parcel.TrackingId, ParcelStatus.Delivered);
+shipping.DeliverToEnd(parcel.TrackingId);
 
 Console.WriteLine($"\nFinal status: {parcel.Status}");
+
+Console.WriteLine("\n=== NOTIFICATION LOG ===");
+foreach (string entry in shipping.NotificationHistory)
+{
+    Console.WriteLine(entry);
+}
