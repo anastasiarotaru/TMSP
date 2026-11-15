@@ -1,28 +1,30 @@
-# Laboratorul 2 - Sabloane structurale (sistem de livrare a coletelor)
+# Laboratory Work 2 - Structural Design Patterns (Package Delivery System)
 
-## Scopul laboratorului
+## Purpose
 
-Scopul laboratorului este studierea sabloanelor de proiectare structurale si folosirea lor pentru a extinde aplicatia de livrare a coletelor din Laboratorul 1. Au fost implementate trei sabloane: **Adapter**, **Decorator** si **Facade**.
+The purpose of this laboratory work is to study the structural design patterns and use them to extend the package delivery application from Laboratory Work 1. Three patterns were implemented: **Adapter**, **Decorator** and **Facade**.
 
-Functionalitatile noi adaugate sunt:
-- un serviciu de livrare `international`, oferit de un curier partener cu un API diferit (**Adapter**);
-- optiuni extra pentru colet - asigurare si manipulare pentru colete fragile - si un jurnal al notificarilor (**Decorator**);
-- o interfata simpla prin care clientul trimite un colet fara sa cunoasca detaliile sistemului (**Facade**).
+The new features are:
+- an `international` delivery service, offered by a partner courier with a different API (**Adapter**);
+- paid extras for a parcel - insurance and fragile handling - and a notification log (**Decorator**);
+- a simple interface through which the client sends a parcel without knowing the details of the system (**Facade**).
 
-## Ce sunt sabloanele structurale
+## What structural patterns are
 
-Sabloanele structurale descriu cum se combina clasele si obiectele pentru a forma structuri mai mari, pastrand codul flexibil si usor de extins. Ele ajuta la conectarea componentelor incompatibile, la adaugarea de comportament fara modificarea claselor existente si la ascunderea complexitatii unui subsistem.
+Structural patterns describe how classes and objects are combined into larger structures while keeping the code flexible and easy to extend. They help connect incompatible components, add behaviour without modifying existing classes and hide the complexity of a subsystem.
 
-## Cum se ruleaza
+## How to run
+
+The .NET SDK must be installed. The project uses .NET 10.
 
 ```powershell
 cd Lab2
 dotnet run
 ```
 
-Programul cere datele destinatarului, greutatea, serviciul (`standard`, `express`, `overnight`, `international`), daca coletul este fragil si valoarea declarata pentru asigurare (0 = fara asigurare).
+The program asks for the recipient's details, the weight, the service (`standard`, `express`, `overnight`, `international`), whether the parcel is fragile and the declared value for insurance (0 = no insurance). The program's messages are in Romanian.
 
-Exemplu:
+Example:
 
 ```text
 Numele destinatarului: Ion Popescu
@@ -35,17 +37,17 @@ Colet fragil? (da / nu): da
 Valoare declarata pentru asigurare (lei, 0 = fara asigurare): 1000
 ```
 
-Pretul se calculeaza astfel: express = 2 x (5 + 1,5 x 3,2) = 19,60 lei; asigurare = 2% x 1000 = 20 lei; fragil = 10 lei. Total: **49,60 lei**.
+The price is calculated as follows: express = 2 x (5 + 1.5 x 3.2) = 19.60 lei; insurance = 2% x 1000 = 20 lei; fragile = 10 lei. Total: **49.60 lei**.
 
-## Implementarea sabloanelor
+## Implementation of the patterns
 
 ### 1. Adapter
 
-**Fisier:** `Adapter.cs`
+**File:** `Adapter.cs`
 
-Clasa `PartnerCourierApi` simuleaza API-ul unui curier extern. Interfata lui este incompatibila cu `IPricingStrategy`: primeste greutatea in grame si un cod de zona si intoarce pretul in eurocenti.
+The `PartnerCourierApi` class simulates the API of an external courier. Its interface is incompatible with `IPricingStrategy`: it receives the weight in grams and a zone code and returns the price in euro cents.
 
-`PartnerPricingAdapter` implementeaza `IPricingStrategy` si traduce apelul: transforma kilogramele in grame, apeleaza API-ul si converteste eurocentii in lei.
+`PartnerPricingAdapter` implements `IPricingStrategy` and translates the call: it converts kilograms to grams, calls the API and converts the euro cents to lei.
 
 ```csharp
 public double CalculatePrice(double weightKg)
@@ -56,17 +58,17 @@ public double CalculatePrice(double weightKg)
 }
 ```
 
-**Motivatie:** serviciul extern poate fi folosit ca orice alta strategie de pret. `DeliveryService` nu a fost modificat si nu stie ca in spate se afla un sistem strain.
+**Motivation:** the external service can be used like any other pricing strategy. `DeliveryService` was not modified and does not know that an external system is used behind it.
 
 ### 2. Decorator
 
-**Fisier:** `Decorator.cs`
+**File:** `Decorator.cs`
 
-`PricingDecorator` implementeaza `IPricingStrategy` si contine o alta strategie, careia ii delega calculul. Decoratorii concreti adauga cate un cost:
-- `InsuranceDecorator` - 2% din valoarea declarata, minim 3 lei;
-- `FragileDecorator` - taxa fixa de 10 lei.
+`PricingDecorator` implements `IPricingStrategy` and holds another strategy, to which it delegates the calculation. The concrete decorators each add one cost:
+- `InsuranceDecorator` - 2% of the declared value, minimum 3 lei;
+- `FragileDecorator` - a fixed fee of 10 lei.
 
-Decoratorii se pot combina in orice ordine si peste orice serviciu:
+The decorators can be combined in any order and on top of any service:
 
 ```csharp
 IPricingStrategy pricing = new ExpressPricing(new StandardPricing());
@@ -74,18 +76,18 @@ pricing = new InsuranceDecorator(pricing, 1000);
 pricing = new FragileDecorator(pricing);
 ```
 
-Acelasi sablon este folosit si pentru notificari: `NotifierDecorator` implementeaza `INotifier`, iar `LoggingNotifier` salveaza fiecare mesaj, cu ora, intr-un jurnal, apoi il trimite mai departe catre notificatorul decorat (de exemplu `ConsoleNotifier`).
+The same pattern is used for notifications: `NotifierDecorator` implements `INotifier`, and `LoggingNotifier` saves every message, with its time, in a log and then passes it on to the decorated notifier (for example `ConsoleNotifier`).
 
-**Motivatie:** optiunile extra se adauga la rulare, fara cate o subclasa pentru fiecare combinatie (express + fragil, overnight + asigurare + fragil etc.) si fara modificarea strategiilor existente.
+**Motivation:** the extras are added at runtime, without a subclass for every combination (express + fragile, overnight + insurance + fragile, etc.) and without modifying the existing strategies.
 
 ### 3. Facade
 
-**Fisier:** `Facade.cs`
+**File:** `Facade.cs`
 
-`ShippingFacade` ascunde intregul subsistem: configurarea serviciilor (inclusiv adapterul), compunerea decoratorilor, `DeliveryService`, `LabelPrinter` si `LoggingNotifier`. Clientul foloseste doar cateva metode:
-- `Ship(ShipmentRequest)` - aplica optiunile extra, inregistreaza coletul si afiseaza eticheta;
-- `DeliverToEnd(trackingId)` - trece coletul prin toate etapele pana la `Delivered`;
-- `ServiceNames` si `NotificationHistory` - pentru afisare.
+`ShippingFacade` hides the whole subsystem: the configuration of the services (including the adapter), the composition of the decorators, `DeliveryService`, `LabelPrinter` and `LoggingNotifier`. The client uses only a few members:
+- `Ship(ShipmentRequest)` - applies the extras, registers the parcel and prints the label;
+- `DeliverToEnd(trackingId)` - moves the parcel through all stages up to `Delivered`;
+- `ServiceNames` and `NotificationHistory` - for display.
 
 ```csharp
 var shipping = new ShippingFacade();
@@ -94,29 +96,29 @@ Parcel parcel = shipping.Ship(new ShipmentRequest(
 shipping.DeliverToEnd(parcel.TrackingId);
 ```
 
-**Motivatie:** `main.cs` se ocupa doar de citirea datelor si afisare. Daca se schimba modul de construire a serviciilor, se modifica doar fatada.
+**Motivation:** `main.cs` only reads the input and displays the results. If the way the services are built changes, only the facade is modified.
 
-## Modificari aduse codului din Laboratorul 1
+## Changes to the code from Laboratory Work 1
 
-`DeliveryService` a primit o supraincarcare a metodei `Register` care accepta direct o `IPricingStrategy`. Astfel, fatada poate trimite o strategie decorata. Metoda veche (dupa numele serviciului) a ramas si foloseste noua metoda intern.
+`DeliveryService` received an overload of the `Register` method that accepts an `IPricingStrategy` directly. This way, the facade can pass a decorated strategy. The old method (by service name) is still available and calls the new method internally.
 
-## Structura proiectului
+## Project structure
 
-- `SRP.cs`, `OCP.cs`, `DIP.cs` - codul preluat din Laboratorul 1 (`../Lab1`);
+- `SRP.cs`, `OCP.cs`, `DIP.cs` - code taken from Laboratory Work 1 (`../Lab1`);
 - `Adapter.cs` - `PartnerCourierApi`, `PartnerPricingAdapter`;
 - `Decorator.cs` - `PricingDecorator`, `InsuranceDecorator`, `FragileDecorator`, `NotifierDecorator`, `LoggingNotifier`;
 - `Facade.cs` - `ShipmentRequest`, `ShippingFacade`;
-- `main.cs` - punctul de intrare, care foloseste fatada.
+- `main.cs` - the entry point, which uses the facade.
 
-## Verificare
+## Testing
 
-Se ruleaza aplicatia si se verifica:
-- pretul pentru `international` (3,2 kg -> 250,38 lei);
-- pretul cu asigurare si/sau fragil adaugat peste fiecare serviciu;
-- afisarea optiunilor alese pe eticheta (ex. `express + asigurare + fragil`);
-- jurnalul notificarilor la finalul programului;
-- respingerea unui serviciu inexistent.
+Run the application and check:
+- the price for `international` (3.2 kg -> 250.38 lei);
+- the price with insurance and/or fragile handling added on top of each service;
+- the selected extras shown on the label (e.g. `express + asigurare + fragil`);
+- the notification log at the end of the program;
+- that an unknown service is rejected.
 
-## Concluzie
+## Conclusion
 
-Sabloanele structurale au permis extinderea aplicatiei fara modificari majore in codul existent. Adapterul a integrat un serviciu extern incompatibil, decoratorii au adaugat optiuni si jurnalizare care se pot combina liber, iar fatada a simplificat utilizarea intregului sistem din partea clientului.
+The structural patterns made it possible to extend the application without major changes to the existing code. The adapter integrated an incompatible external service, the decorators added extras and logging that can be combined freely, and the facade simplified the use of the whole system from the client's side.
