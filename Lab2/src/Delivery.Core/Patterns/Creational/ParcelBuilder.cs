@@ -1,4 +1,7 @@
-namespace DeliverySOLID;
+using Delivery.Domain;
+using Delivery.Pricing;
+
+namespace Delivery.Creational;
 
 // BUILDER: builds a Parcel step by step, with fluent methods.
 // The checks are done in Build(), before the parcel is created.

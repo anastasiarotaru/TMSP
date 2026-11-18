@@ -1,4 +1,4 @@
-namespace DeliverySOLID;
+namespace Delivery.Creational;
 
 // SINGLETON: there is only one instance of the AWB code generator.
 // This way two parcels can never get the same code, even if they are created in different places.
