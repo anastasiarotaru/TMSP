@@ -1,27 +1,33 @@
 # Laboratory 2 - Structural Patterns (Parcel Delivery System)
 
-## Purpose of the Laboratory
+A console application in C# (.NET 10) that extends the parcel delivery system from Laboratory 1 with three structural patterns: **Adapter**, **Decorator** and **Facade**.
 
-The purpose of this laboratory is to study structural design patterns and use them to extend the parcel delivery application from Laboratory 1 (which contains the SOLID principles from Laboratory 0 and the creational patterns Factory Method, Builder and Singleton). Three patterns were implemented: **Adapter**, **Decorator** and **Facade**.
+The full report (domain, UML diagrams, code snippets, tests, conclusions) is in [REPORT.md](REPORT.md).
 
-The new features are:
-- an `international` delivery service, provided by a partner courier with a different API (**Adapter**);
-- extra parcel options - insurance and special handling for fragile parcels - and a notification log (**Decorator**);
-- a simple interface through which the client sends a parcel without knowing the details of the system (**Facade**).
+## Requirements
 
-## What Structural Patterns Are
+- .NET SDK 10 or newer
+- Internet access on the first build (to restore the NuGet packages: Serilog, xUnit)
 
-Structural patterns describe how classes and objects are combined to form larger structures while keeping the code flexible and easy to extend. They help connect incompatible components, add behavior without modifying existing classes, and hide the complexity of a subsystem.
+## Build, Run and Test
 
-## How to Run
+All commands are run from the `Lab2` folder.
 
-```powershell
-dotnet run
+```bash
+# build everything
+dotnet build
+
+# scripted demo (no input needed) - shows each pattern, then all of them together
+dotnet run --project src/Delivery.App
+
+# interactive mode - reads one shipment from the keyboard
+dotnet run --project src/Delivery.App -- --interactive
+
+# run all unit tests
+dotnet test
 ```
 
-The program asks for the recipient's details, the weight, the service (`standard`, `express`, `overnight`, `international`), whether the parcel is fragile (`yes` / `no`), and the declared value for insurance (0 = no insurance).
-
-Example:
+Example for the interactive mode:
 
 ```text
 Recipient name: Ion Popescu
@@ -34,105 +40,52 @@ Fragile parcel? (yes / no): yes
 Declared value for insurance (lei, 0 = no insurance): 1000
 ```
 
-The price is calculated as follows: express = 2 x (5 + 1.5 x 3.2) = 19.60 lei; insurance = 2% x 1000 = 20 lei; fragile = 10 lei. Total: **49.60 lei**.
+Price: express = 2 x (5 + 1.5 x 3.2) = 19.60 lei; insurance = 2% x 1000 = 20 lei; fragile = 10 lei. Total: **49.60 lei**.
 
-## Implementation of the Patterns
 
-### 1. Adapter
+## Patterns
 
-**File:** `Adapter.cs`
+| Pattern | Where | Role in the project |
+|---|---|---|
+| **Adapter** | `Patterns/Structural/Adapter` | `SerilogNotifierAdapter` makes the **Serilog** logging library (third-party) usable as an `INotifier`, so customer notifications go into the logging pipeline. |
+| **Decorator** | `Patterns/Structural/Decorator` | `InsuranceDecorator` and `FragileDecorator` add extra costs to any pricing strategy, in any order; `HistoryNotifier` keeps a history of notifications. |
+| **Facade** | `Patterns/Structural/Facade` | `ShippingFacade` hides the factories, decorators, delivery service and label printer behind `Ship` and `DeliverToEnd`. |
+| Factory Method, Builder, Singleton | `Patterns/Creational` | From Laboratory 1: create the pricing strategies, build and validate the parcel, generate unique AWB codes. |
 
-The `PartnerCourierApi` class simulates the API of an external courier. Its interface is incompatible with `IPricingStrategy`: it takes the weight in grams and a zone code, and returns the price in euro cents.
-
-`PartnerPricingAdapter` implements `IPricingStrategy` and translates the call: it converts kilograms to grams, calls the API and converts euro cents to lei.
-
-```csharp
-public double CalculatePrice(double weightKg)
-{
-    int grams = (int)Math.Ceiling(weightKg * 1000);
-    int cents = api.QuoteInEuroCents(grams, zoneCode);
-    return Math.Round(cents / 100.0 * LeiPerEuro, 2);
-}
-```
-
-The adapter is created by `InternationalPricingFactory`, a new factory that extends `PricingFactory` from Laboratory 1. This way, the international service is added exactly like the other services: one new factory and one line in the factory dictionary.
-
-```csharp
-public class InternationalPricingFactory : PricingFactory
-{
-    public override IPricingStrategy CreatePricing() =>
-        new PartnerPricingAdapter(new PartnerCourierApi(), zoneCode);
-}
-```
-
-**Motivation:** the external service can be used like any other pricing strategy. `DeliveryService` does not know that a foreign system is behind it.
-
-### 2. Decorator
-
-**File:** `Decorator.cs`
-
-`PricingDecorator` implements `IPricingStrategy` and wraps another strategy, to which it delegates the calculation. The concrete decorators each add one cost:
-- `InsuranceDecorator` - 2% of the declared value, at least 3 lei;
-- `FragileDecorator` - a fixed fee of 10 lei.
-
-The decorators can be combined in any order and on top of any service:
-
-```csharp
-IPricingStrategy pricing = new ExpressPricing(new StandardPricing());
-pricing = new InsuranceDecorator(pricing, 1000);
-pricing = new FragileDecorator(pricing);
-```
-
-The same pattern is used for notifications: `NotifierDecorator` implements `INotifier`, and `LoggingNotifier` saves each message, with its time, in a log, then passes it on to the wrapped notifier (for example `ConsoleNotifier`).
-
-**Motivation:** extra options are added at runtime, without a subclass for every combination (express + fragile, overnight + insurance + fragile, etc.) and without modifying the existing strategies.
-
-### 3. Facade
-
-**File:** `Facade.cs`
-
-`ShippingFacade` hides the whole subsystem: creating the services through factories (including the adapter), composing the decorators, `DeliveryService`, `LabelPrinter` and `LoggingNotifier`. The client uses only a few methods:
-- `Ship(ShipmentRequest)` - applies the extra options, registers the parcel and prints the label;
-- `DeliverToEnd(trackingId)` - moves the parcel through all the stages up to `Delivered`;
-- `ServiceNames` and `NotificationHistory` - for display.
-
-```csharp
-var shipping = new ShippingFacade();
-Parcel parcel = shipping.Ship(new ShipmentRequest(
-    name, email, street, city, weight, service, fragile, declaredValue));
-shipping.DeliverToEnd(parcel.TrackingId);
-```
-
-**Motivation:** `main.cs` only reads the input and displays the results. If the way the services are built changes, only the facade is modified.
-
-## Connection to Laboratory 1
-
-The creational patterns from Laboratory 1 are still used:
-- **Factory Method** - the facade creates all pricing strategies through factories (`StandardPricingFactory`, `ExpressPricingFactory`, `OvernightPricingFactory` and the new `InternationalPricingFactory`);
-- **Builder** - `DeliveryService` builds the parcel with `ParcelBuilder`, which validates the data (name, address, maximum weight of 30 kg) and calculates the price with the strategy it receives, including a decorated one;
-- **Singleton** - `ParcelBuilder` gets the tracking number (AWB) from `TrackingIdGenerator.Instance`.
-
-Changes made to the Laboratory 1 code: `DeliveryService` received an overload of the `Register` method that accepts an `IPricingStrategy` directly. This lets the facade pass a decorated strategy to `ParcelBuilder`. The old method (by service name) was kept and uses the new method internally.
+Execution path through the patterns:
+`Program -> ShippingFacade -> PricingFactory -> option decorators -> DeliveryService -> ParcelBuilder/TrackingIdGenerator -> HistoryNotifier -> SerilogNotifierAdapter -> Serilog`.
 
 ## Project Structure
 
-- `SRP.cs`, `OCP.cs`, `DIP.cs` - the SOLID principles (Laboratory 0);
-- `Factory.cs`, `Builder.cs`, `Singleton.cs` - the creational patterns (Laboratory 1);
-- `Adapter.cs` - `PartnerCourierApi`, `PartnerPricingAdapter`, `InternationalPricingFactory`;
-- `Decorator.cs` - `PricingDecorator`, `InsuranceDecorator`, `FragileDecorator`, `NotifierDecorator`, `LoggingNotifier`;
-- `Facade.cs` - `ShipmentRequest`, `ShippingFacade`;
-- `main.cs` - the entry point, which uses the facade.
+```text
+Lab2/
+├── Lab2.slnx
+├── README.md
+├── REPORT.md
+├── src/
+│   ├── Delivery.Core/                  class library (domain + patterns)
+│   │   ├── Domain/                     Parcel, Address, ParcelStatus, ShipmentRequest
+│   │   ├── Pricing/                    IPricingStrategy, IPricingOption, Standard/Express/Overnight/International
+│   │   ├── Notifications/              INotifier, ConsoleNotifier, InMemoryNotifier
+│   │   ├── Services/                   IDeliveryService, DeliveryService, ILabelPrinter, LabelPrinter
+│   │   └── Patterns/
+│   │       ├── Creational/             PricingFactory (+ subclasses), ParcelBuilder, TrackingIdGenerator
+│   │       └── Structural/
+│   │           ├── Adapter/            SerilogNotifierAdapter
+│   │           ├── Decorator/          PricingDecorator, InsuranceDecorator, FragileDecorator,
+│   │           │                       InsuranceOption, FragileOption, NotifierDecorator, HistoryNotifier
+│   │           └── Facade/             IShippingFacade, ShippingFacade
+│   └── Delivery.App/                   console client
+│       ├── Program.cs                  configures Serilog, chooses demo / interactive mode
+│       ├── CompositionRoot.cs          the only place where concrete classes are connected
+│       ├── Demo.cs                     scripted demo of each pattern
+│       └── InteractiveSession.cs       keyboard input
+└── tests/
+    └── Delivery.Tests/                 xUnit tests (Adapter/, Decorator/, Facade/, Stubs/)
+```
 
-## Verification
+## Extending the Application
 
-Run the application and check:
-- the price for `international` (3.2 kg -> 250.38 lei);
-- the price with insurance and/or fragile handling added on top of each service;
-- the chosen options shown on the label (e.g. `express + insurance + fragile`);
-- the notification log at the end of the program;
-- rejection of an unknown service;
-- rejection of a weight above 30 kg (validated by `ParcelBuilder`).
-
-## Conclusion
-
-The structural patterns made it possible to extend the application without major changes to the existing code. The adapter integrated an incompatible external service and is created through a factory, like the other services; the decorators added options and logging that can be combined freely; and the facade simplified the use of the whole system for the client.
+- **New delivery service:** add a new `PricingFactory` subclass (and its strategy), then add it to the list in `CompositionRoot.cs`. The facade does not change.
+- **New extra option:** add a new `PricingDecorator` subclass and an `IPricingOption` that applies it. The facade and `ShipmentRequest` do not change.
+- **New notification channel:** add a new `INotifier` (or a new `NotifierDecorator`) and connect it in `CompositionRoot.cs`.
