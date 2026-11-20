@@ -1,7 +1,15 @@
 using DeliverySOLID;
-using DeliveryStructural;
 
-var shipping = new ShippingFacade();
+IPricingStrategy standard = new StandardPricing();
+var services = new Dictionary<string, IPricingStrategy>(StringComparer.OrdinalIgnoreCase)
+{
+    { "standard", standard },
+    { "express", new ExpressPricing(standard) },
+    { "overnight", new OvernightPricing(standard) }
+};
+
+var delivery = new DeliveryService(new ConsoleNotifier(), services);
+var labels = new LabelPrinter();
 
 Console.WriteLine("=== PARCEL DELIVERY SERVICE ===");
 Console.WriteLine("--------------------------------------------------------------");
@@ -20,22 +28,13 @@ if (!double.TryParse(Console.ReadLine(), out double weight))
     Console.WriteLine("Error: the weight must be a number.");
     return;
 }
-Console.Write($"Service ({string.Join(" / ", shipping.ServiceNames)}): ");
+Console.Write("Service (standard / express / overnight): ");
 string service = Console.ReadLine() ?? "";
-Console.Write("Fragile parcel? (yes / no): ");
-bool fragile = (Console.ReadLine() ?? "").Trim().Equals("yes", StringComparison.OrdinalIgnoreCase);
-Console.Write("Declared value for insurance (lei, 0 = no insurance): ");
-if (!double.TryParse(Console.ReadLine(), out double declaredValue) || declaredValue < 0)
-{
-    Console.WriteLine("Error: the declared value must be a positive number or 0.");
-    return;
-}
 
 Parcel parcel;
 try
 {
-    parcel = shipping.Ship(new ShipmentRequest(
-        name, email, street, city, weight, service, fragile, declaredValue));
+    parcel = delivery.Register(name, email, new Address(street, city), weight, service);
 }
 catch (ArgumentException ex)
 {
@@ -43,13 +42,11 @@ catch (ArgumentException ex)
     return;
 }
 
+labels.PrintLabel(parcel);
+
 Console.WriteLine("\n=== DELIVERY STAGES ===");
-shipping.DeliverToEnd(parcel.TrackingId);
+delivery.Advance(parcel.TrackingId, ParcelStatus.PickedUp);
+delivery.Advance(parcel.TrackingId, ParcelStatus.InTransit);
+delivery.Advance(parcel.TrackingId, ParcelStatus.Delivered);
 
 Console.WriteLine($"\nFinal status: {parcel.Status}");
-
-Console.WriteLine("\n=== NOTIFICATION LOG ===");
-foreach (string entry in shipping.NotificationHistory)
-{
-    Console.WriteLine(entry);
-}

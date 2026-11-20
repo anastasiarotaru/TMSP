@@ -24,7 +24,7 @@ public class ShippingFacade
 
     public ShippingFacade()
     {
-        // Each service is created by its own factory (Factory Method from Laboratory 2).
+        // Each service is created by its own factory (Factory Method from Laboratory 1).
         var factories = new Dictionary<string, PricingFactory>(StringComparer.OrdinalIgnoreCase)
         {
             { "standard", new StandardPricingFactory() },

@@ -38,7 +38,7 @@ public class PartnerPricingAdapter : IPricingStrategy
     }
 }
 
-// Factory Method (from Laboratory 2): the factory for the international service.
+// Factory Method (from Laboratory 1): the factory for the international service.
 // It creates the adapter, so the new service is added like any other.
 public class InternationalPricingFactory : PricingFactory
 {

@@ -1,13 +1,20 @@
 using DeliverySOLID;
 
-IPricingStrategy standard = new StandardPricing();
-var services = new Dictionary<string, IPricingStrategy>(StringComparer.OrdinalIgnoreCase)
+// 1. FACTORY METHOD: each factory creates the pricing strategy for one service.
+var factories = new Dictionary<string, PricingFactory>(StringComparer.OrdinalIgnoreCase)
 {
-    { "standard", standard },
-    { "express", new ExpressPricing(standard) },
-    { "overnight", new OvernightPricing(standard) }
+    { "standard", new StandardPricingFactory() },
+    { "express", new ExpressPricingFactory() },
+    { "overnight", new OvernightPricingFactory() }
 };
 
+// Get the pricing strategy from each factory (OCP: a new service = a new factory + one line here).
+var services = factories.ToDictionary(
+    kv => kv.Key,
+    kv => kv.Value.CreatePricing(),
+    StringComparer.OrdinalIgnoreCase);
+
+// 2. Dependencies are supplied from outside (DIP).
 var delivery = new DeliveryService(new ConsoleNotifier(), services);
 var labels = new LabelPrinter();
 
@@ -42,6 +49,7 @@ catch (ArgumentException ex)
     return;
 }
 
+// 3. The label (SRP) and the delivery stages.
 labels.PrintLabel(parcel);
 
 Console.WriteLine("\n=== DELIVERY STAGES ===");

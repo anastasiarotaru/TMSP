@@ -47,22 +47,32 @@ public class DeliveryService
         this.services = services;
     }
 
+    public IEnumerable<string> ServiceNames => services.Keys;
+
     public Parcel Register(string recipientName, string recipientEmail,
                            Address destination, double weightKg, string service)
     {
-        if (!services.ContainsKey(service))
+        if (!services.TryGetValue(service, out IPricingStrategy? pricing))
         {
             throw new ArgumentException(
                 $"Unknown service '{service}'. Available: {string.Join(", ", services.Keys)}");
         }
 
+        return Register(recipientName, recipientEmail, destination, weightKg, service, pricing);
+    }
+
+    // Allows registering with a pricing strategy built outside (e.g. decorated with extra options).
+    public Parcel Register(string recipientName, string recipientEmail,
+                           Address destination, double weightKg, string service,
+                           IPricingStrategy pricing)
+    {
         // The Builder creates the parcel; it validates the data and gets the code from the Singleton.
         Parcel parcel = new ParcelBuilder()
             .To(recipientName, recipientEmail)
             .Destination(destination)
             .Weight(weightKg)
             .Service(service)
-            .Build(services[service]);
+            .Build(pricing);
 
         parcels[parcel.TrackingId] = parcel;
 

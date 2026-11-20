@@ -1,5 +1,6 @@
 namespace DeliverySOLID;
 
+// The statuses a parcel goes through.
 public enum ParcelStatus
 {
     Registered,
@@ -8,6 +9,7 @@ public enum ParcelStatus
     Delivered
 }
 
+// Delivery address.
 public class Address
 {
     public string Street { get; }
@@ -22,6 +24,7 @@ public class Address
     public override string ToString() => $"{Street}, {City}";
 }
 
+// The data of a parcel. It has no pricing, printing or saving logic.
 public class Parcel
 {
     public string TrackingId { get; }
